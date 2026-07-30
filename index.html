@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор прочности крепёжных изделий — Крепком</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <img src="logo-new-krepcom_WATERMARK.png" alt="Крепком">
+    </header>
+
+    <main class="calc-card">
+        <h1 class="calc-title">Калькулятор прочности крепёжных изделий</h1>
+        <p class="calc-subtitle">Расчёт на разрыв, срез и рекомендуемый крутящий момент</p>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="material">Материал</label>
+                <select id="material">
+                    <option value="steel">Сталь (класс прочности)</option>
+                    <option value="a2">Нержавейка A2 (AISI 304)</option>
+                    <option value="a4">Нержавейка A4 (AISI 316)</option>
+                    <option value="brass">Латунь</option>
+                    <option value="phosphor_bronze">Бронза фосфористая</option>
+                    <option value="silicon_bronze">Бронза кремнистая</option>
+                    <option value="cuni">Сплав медь-никель</option>
+                    <option value="polyamide">Полиамид (PA6/PA66)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="grade">Класс / Марка</label>
+                <select id="grade"></select>
+            </div>
+
+            <div class="form-group">
+                <label for="diameter">Диаметр резьбы</label>
+                <select id="diameter"></select>
+            </div>
+        </div>
+
+        <div class="results-grid">
+            <!-- РАЗРЫВ -->
+            <div class="result-section">
+                <h3>Нагрузка на разрыв (отрыв)</h3>
+                <div class="values-row">
+                    <div class="value-item">
+                        <div class="label">Ньютоны</div>
+                        <div class="value" id="tensile-n">—</div>
+                        <div class="unit">Н</div>
+                    </div>
+                    <div class="value-item">
+                        <div class="label">Килограммы</div>
+                        <div class="value" id="tensile-kg">—</div>
+                        <div class="unit">кгс</div>
+                    </div>
+                    <div class="value-item">
+                        <div class="label">Тонны</div>
+                        <div class="value" id="tensile-t">—</div>
+                        <div class="unit">т</div>
+                    </div>
+                </div>
+                <div class="explanation" id="tensile-explanation"></div>
+            </div>
+
+            <!-- СРЕЗ -->
+            <div class="result-section">
+                <h3>Нагрузка на срез (слом)</h3>
+                <div class="values-row">
+                    <div class="value-item">
+                        <div class="label">Ньютоны</div>
+                        <div class="value" id="shear-n">—</div>
+                        <div class="unit">Н</div>
+                    </div>
+                    <div class="value-item">
+                        <div class="label">Килограммы</div>
+                        <div class="value" id="shear-kg">—</div>
+                        <div class="unit">кгс</div>
+                    </div>
+                    <div class="value-item">
+                        <div class="label">Тонны</div>
+                        <div class="value" id="shear-t">—</div>
+                        <div class="unit">т</div>
+                    </div>
+                </div>
+                <div class="explanation" id="shear-explanation"></div>
+            </div>
+
+            <!-- КРУТЯЩИЙ МОМЕНТ -->
+            <div class="result-section">
+                <h3>Рекомендуемый крутящий момент</h3>
+                <div class="values-row">
+                    <div class="value-item">
+                        <div class="label">Ньютон-метры</div>
+                        <div class="value" id="torque-nm">—</div>
+                        <div class="unit">Н·м</div>
+                    </div>
+                    <div class="value-item">
+                        <div class="label">Килограмм-сила-метры</div>
+                        <div class="value" id="torque-kgm">—</div>
+                        <div class="unit">кгс·м</div>
+                    </div>
+                </div>
+                <div class="explanation" id="torque-explanation"></div>
+            </div>
+        </div>
+
+        <div class="note">
+            ⚠️ Расчёт выполнен по ГОСТ Р ИСО 898-1 и справочным данным. Значения являются теоретическими. 
+            Для ответственных соединений применяйте нормативные документы и учитывайте коэффициент запаса прочности (обычно 2-3).
+        </div>
+    </main>
+
+    <footer class="footer">
+        © 2026 Крепком. Инженерный калькулятор.
+    </footer>
+</div>
+
+<script>
+const threadArea = {
+    1: 0.58, 1.2: 0.87, 1.4: 1.20, 1.6: 1.57, 1.8: 2.00, 2: 2.45,
+    2.2: 3.02, 2.5: 3.60, 3: 5.03, 3.5: 7.00, 4: 9.00, 5: 14.2,
+    6: 20.1, 7: 28.9, 8: 36.6, 10: 58.0, 12: 84.3, 14: 115,
+    16: 157, 18: 192, 20: 245, 22: 303, 24: 353, 27: 459,
+    30: 561, 33: 694, 36: 817, 39: 976, 42: 1120, 45: 1310,
+    48: 1470, 52: 1760, 56: 2030, 60: 2360, 64: 2680, 68: 3000,
+    72: 3460, 76: 3890, 80: 4340, 85: 4960, 90: 5590, 100: 6960
+};
+
+const materials = {
+    steel: {
+        label: 'Сталь',
+        grades: {
+            '5.8':  { ut: 500,  yt: 400,  K: 0.20 },
+            '8.8':  { ut: 800,  yt: 640,  K: 0.20 },
+            '10.9': { ut: 1040, yt: 940,  K: 0.20 },
+            '12.9': { ut: 1220, yt: 1100, K: 0.20 },
+            '14.9': { ut: 1400, yt: 1260, K: 0.20 }
+        }
+    },
+    a2: {
+        label: 'Нержавейка A2',
+        grades: {
+            'A2-50': { ut: 500, yt: 210, K: 0.25 },
+            'A2-70': { ut: 700, yt: 450, K: 0.25 }
+        }
+    },
+    a4: {
+        label: 'Нержавейка A4',
+        grades: {
+            'A4-50': { ut: 500, yt: 210, K: 0.27 },
+            'A4-70': { ut: 700, yt: 450, K: 0.27 },
+            'A4-80': { ut: 800, yt: 600, K: 0.27 }
+        }
+    },
+    brass: {
+        label: 'Латунь',
+        grades: {
+            'Л63': { ut: 350, yt: 150, K: 0.18 },
+            'ЛС59-1': { ut: 420, yt: 200, K: 0.18 }
+        }
+    },
+    phosphor_bronze: {
+        label: 'Бронза фосфористая',
+        grades: {
+            'БрАЖ9-4': { ut: 600, yt: 300, K: 0.18 },
+            'БрОФ10-1': { ut: 450, yt: 220, K: 0.18 }
+        }
+    },
+    silicon_bronze: {
+        label: 'Бронза кремнистая',
+        grades: {
+            'БрКМц3-1': { ut: 650, yt: 320, K: 0.18 }
+        }
+    },
+    cuni: {
+        label: 'Сплав медь-никель',
+        grades: {
+            'МНЖ5-1': { ut: 400, yt: 180, K: 0.20 },
+            'МНЖМц10-1-1': { ut: 480, yt: 240, K: 0.20 }
+        }
+    },
+    polyamide: {
+        label: 'Полиамид',
+        grades: {
+            'PA6': { ut: 80, yt: 50, K: 0.15 },
+            'PA66': { ut: 90, yt: 60, K: 0.15 }
+        }
+    }
+};
+
+const materialSelect = document.getElementById('material');
+const gradeSelect = document.getElementById('grade');
+const diameterSelect = document.getElementById('diameter');
+
+Object.keys(threadArea).forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = `M${d}`;
+    diameterSelect.appendChild(opt);
+});
+diameterSelect.value = 10;
+
+function updateGrades() {
+    gradeSelect.innerHTML = '';
+    const mat = materials[materialSelect.value];
+    Object.keys(mat.grades).forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = g;
+        gradeSelect.appendChild(opt);
+    });
+    calculate();
+}
+
+function calculate() {
+    const mat = materials[materialSelect.value];
+    const grade = mat.grades[gradeSelect.value];
+    const d = parseFloat(diameterSelect.value);
+    const As = threadArea[d];
+
+    // Разрыв (Н)
+    const tensileN = grade.ut * As;
+    const tensileKgf = tensileN / 9.81;
+    const tensileT = tensileKgf / 1000;
+
+    // Срез (Н)
+    const shearN = 0.6 * grade.ut * As;
+    const shearKgf = shearN / 9.81;
+    const shearT = shearKgf / 1000;
+
+    // Крутящий момент
+    const preload = 0.7 * grade.yt * As;
+    const torqueNm = (grade.K * d * preload) / 1000;
+    const torqueKgm = torqueNm / 9.81;
+
+    // Вывод значений
+    document.getElementById('tensile-n').textContent = formatNum(tensileN);
+    document.getElementById('tensile-kg').textContent = formatNum(tensileKgf);
+    document.getElementById('tensile-t').textContent = formatNum(tensileT);
+
+    document.getElementById('shear-n').textContent = formatNum(shearN);
+    document.getElementById('shear-kg').textContent = formatNum(shearKgf);
+    document.getElementById('shear-t').textContent = formatNum(shearT);
+
+    document.getElementById('torque-nm').textContent = formatNum(torqueNm);
+    document.getElementById('torque-kgm').textContent = formatNum(torqueKgm);
+
+    // Пояснения
+    document.getElementById('tensile-explanation').innerHTML = 
+        `Если повесить на болт <strong>${formatNum(tensileKgf)} кг</strong> (${formatNum(tensileT)} т), он оторвётся. ` +
+        `Это максимальная нагрузка на растяжение, которую выдержит ${grade.value || gradeSelect.value} болт диаметром M${d}.`;
+
+    document.getElementById('shear-explanation').innerHTML = 
+        `Если приложить боковую нагрузку <strong>${formatNum(shearKgf)} кг</strong> (${formatNum(shearT)} т), болт срежет. ` +
+        `Нагрузка на срез обычно составляет 60% от прочности на разрыв.`;
+
+    document.getElementById('torque-explanation').innerHTML = 
+        `Рекомендуемый момент затяжки: <strong>${formatNum(torqueNm)} Н·м</strong> (${formatNum(torqueKgm)} кгс·м). ` +
+        `Это усилие, с которым нужно закрутить болт, чтобы создать надёжное соединение без перегрузки.`;
+}
+
+function formatNum(n) {
+    if (n >= 10000) return Math.round(n).toLocaleString('ru-RU');
+    if (n >= 100) return Math.round(n).toLocaleString('ru-RU');
+    if (n >= 10) return n.toFixed(1);
+    return n.toFixed(2);
+}
+
+materialSelect.addEventListener('change', updateGrades);
+gradeSelect.addEventListener('change', calculate);
+diameterSelect.addEventListener('change', calculate);
+
+updateGrades();
+</script>
+</body>
+</html>
