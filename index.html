@@ -8,6 +8,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+    /* Дополнительные элементы калькулятора (не зависят от style.css) */
+    .calc-source { margin: 14px 0 0; font-size: 13px; opacity: .75; }
+    .calc-warnings { list-style: none; margin: 12px 0 0; padding: 0; }
+    .calc-warnings:empty { display: none; }
+    .calc-warnings li { margin: 8px 0; padding: 10px 14px; border-left: 4px solid #e0a100; background: rgba(224,161,0,.12); border-radius: 6px; font-size: 14px; line-height: 1.5; }
+    .calc-warnings li.danger { border-left-color: #d33; background: rgba(211,51,51,.10); }
+    .calc-warnings li.info { border-left-color: #3b82c4; background: rgba(59,130,196,.10); }
+    .calc-method { margin: 22px 0 0; font-size: 14px; line-height: 1.55; }
+    .calc-method summary { cursor: pointer; font-weight: 600; }
+    .calc-method h4 { margin: 16px 0 6px; font-size: 14px; }
+    .calc-method ul { margin: 6px 0; padding-left: 20px; }
+    .calc-method table { border-collapse: collapse; margin: 8px 0; width: 100%; }
+    .calc-method th, .calc-method td { border: 1px solid rgba(128,128,128,.35); padding: 6px 8px; text-align: left; vertical-align: top; }
+</style>
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
@@ -24,7 +39,7 @@
 
 </head>
 <body>
- <header class="header">
+    <header class="header">
         <div class="logo-box">
             <a href="https://krepcom.ru" target="_blank">
                 <img src="logo-new-krepcom_WATERMARK.png" alt="Крепком">
@@ -35,7 +50,6 @@
         <nav class="anchor-nav">
             <ul>
                 <li><a href="https://justaddresssss-hue.github.io/main_page/">На главную</a></li>
-              
             </ul>
         </nav>
         <h1 class="calc-title">Калькулятор прочности крепёжных изделий</h1>
@@ -44,16 +58,7 @@
         <div class="form-grid">
             <div class="form-group">
                 <label for="material">Материал</label>
-                <select id="material">
-                    <option value="steel">Сталь (класс прочности)</option>
-                    <option value="a2">Нержавейка A2 (AISI 304)</option>
-                    <option value="a4">Нержавейка A4 (AISI 316)</option>
-                    <option value="brass">Латунь</option>
-                    <option value="phosphor_bronze">Бронза фосфористая</option>
-                    <option value="silicon_bronze">Бронза кремнистая</option>
-                    <option value="cuni">Сплав медь-никель</option>
-                    <option value="polyamide">Полиамид (PA6/PA66)</option>
-                </select>
+                <select id="material"></select>
             </div>
 
             <div class="form-group">
@@ -62,10 +67,18 @@
             </div>
 
             <div class="form-group">
-                <label for="diameter">Диаметр резьбы</label>
+                <label for="diameter">Диаметр резьбы (крупный шаг)</label>
                 <select id="diameter"></select>
             </div>
+
+            <div class="form-group">
+                <label for="friction">Состояние резьбы / покрытие</label>
+                <select id="friction"></select>
+            </div>
         </div>
+
+        <p class="calc-source" id="source-line"></p>
+        <ul class="calc-warnings" id="warnings"></ul>
 
         <div class="results-grid">
             <!-- РАЗРЫВ -->
@@ -128,177 +141,429 @@
                         <div class="value" id="torque-kgm">—</div>
                         <div class="unit">кгс·м</div>
                     </div>
+                    <div class="value-item">
+                        <div class="label">Усилие затяжки</div>
+                        <div class="value" id="preload-n">—</div>
+                        <div class="unit">Н</div>
+                    </div>
                 </div>
                 <div class="explanation" id="torque-explanation"></div>
             </div>
         </div>
 
+        <details class="calc-method">
+            <summary>Методика расчёта и источники данных</summary>
+
+            <h4>Откуда взяты числа</h4>
+            <ul>
+                <li><strong>Сталь:</strong> ГОСТ ISO 898-1-2014 (идентичен ISO 898-1:2013) — предел прочности Rm,min, напряжение от пробной нагрузки Sp, площадь расчётного сечения As,nom (табл. 3–5).</li>
+                <li><strong>Нержавеющая сталь A2, A4:</strong> ГОСТ ISO 3506-1-2014 (идентичен ISO 3506-1:2009) — Rm,min и Rp0,2 (табл. 2), площадь сечения (прил. A).</li>
+                <li><strong>Медь и сплавы:</strong> ГОСТ EN 28839-2015 (идентичен EN 28839:1991 / ISO 8839:1986) — Rm,min и Rp0,2 (табл. 2). Обозначения материалов CU1–CU7 — по этому стандарту.</li>
+                <li><strong>Диаметры и шаги резьбы:</strong> ГОСТ 8724-2002 (ISO 261), крупный шаг.</li>
+            </ul>
+
+            <h4>Формулы</h4>
+            <ul>
+                <li>Разрушающая нагрузка: <code>Fm,min = Rm,min × As</code></li>
+                <li>Пробная нагрузка (сталь): <code>Fp = Sp × As</code>. Для нержавеющей стали и цветных металлов Sp в стандартах не задано, принято <code>Sp ≈ 0,9 × Rp0,2</code> (у сталей по ISO 898-1 это отношение 0,88–0,94).</li>
+                <li>Срез по резьбе (одна плоскость): <code>Fср = α × Rm,min × As</code>, α = 0,6 для классов 4.6, 5.6, 8.8 и для нержавеющей стали и цветных металлов; α = 0,5 для 4.8, 5.8, 6.8, 9.8, 10.9, 12.9 (по аналогии с EN 1993-1-8, табл. 3.4).</li>
+                <li>Усилие затяжки: <code>F = 0,75 × Fp</code> (разъёмное соединение, повторная затяжка).</li>
+                <li>Момент затяжки: <code>T = F × (0,16·P + 0,58·d₂·μ + 0,5·Dкм·μ)</code>, где P — шаг, d₂ = d − 0,6495·P, Dкм ≈ 1,27·d (опорная поверхность головки шестигранного болта), μ — коэффициент трения в резьбе и под головкой.</li>
+            </ul>
+
+            <h4>Что ГОСТ не нормирует</h4>
+            <p>ГОСТ ISO 898-1 прямо не устанавливает требований к прочности на срез и к соотношению момента затяжки и усилия предварительной затяжки (метод испытания — ISO 16047). Поэтому срез и момент здесь — инженерные оценки, а не величины из стандарта. Коэффициенты трения зависят от покрытия, смазки, твёрдости и шероховатости; ниже — ориентировочные значения по VDI 2230 (ред. 2015) и справочной литературе. Для ответственных соединений определяйте момент опытным путём (ISO 16047) или применяйте контроль по углу поворота / усилию.</p>
+
+            <h4>Принятые коэффициенты трения μ</h4>
+            <table id="mu-table"></table>
+        </details>
+
         <div class="note">
-            ⚠️ Расчёт выполнен по ГОСТ Р ИСО 898-1 и справочным данным. Значения являются теоретическими. 
-            Для ответственных соединений применяйте нормативные документы и учитывайте коэффициент запаса прочности (обычно 2-3).
+            ⚠️ Нагрузки на разрыв и пробные нагрузки взяты из таблиц ГОСТ ISO 898-1 (сталь), ГОСТ ISO 3506-1 (нержавейка) и ГОСТ EN 28839 (цветные металлы); значения округлены до трёх значащих цифр, как в стандартах. Нагрузка на срез и момент затяжки — расчётные оценки (см. «Методику расчёта»): при затяжке динамометрическим ключом фактическое усилие обычно отличается от расчётного примерно на ±25 %. Для ответственных соединений применяйте нормативные документы на узел и учитывайте коэффициент запаса прочности (обычно 2–3).
         </div>
     </main>
 
     <footer class="footer">
         © 2026 Крепком. Инженерный калькулятор.
     </footer>
-</div>
 
 <script>
-const threadArea = {
-    1: 0.58, 1.2: 0.87, 1.4: 1.20, 1.6: 1.57, 1.8: 2.00, 2: 2.45,
-    2.2: 3.02, 2.5: 3.60, 3: 5.03, 3.5: 7.00, 4: 9.00, 5: 14.2,
-    6: 20.1, 7: 28.9, 8: 36.6, 10: 58.0, 12: 84.3, 14: 115,
-    16: 157, 18: 192, 20: 245, 22: 303, 24: 353, 27: 459,
-    30: 561, 33: 694, 36: 817, 39: 976, 42: 1120, 45: 1310,
-    48: 1470, 52: 1760, 56: 2030, 60: 2360, 64: 2680, 68: 3000,
-    72: 3460, 76: 3890, 80: 4340, 85: 4960, 90: 5590, 100: 6960
-};
+/* ============================================================
+   Константы методики
+   ============================================================ */
+const G = 9.80665;            // Н в одном кгс
+const PRELOAD_RATIO = 0.75;   // усилие затяжки / пробная нагрузка
+const PROOF_FROM_YIELD = 0.9; // условное Sp = 0,9·Rp0,2 (где Sp в стандарте не задано)
+const DKM_RATIO = 1.27;       // Dкм / d для шестигранной головки (dw и отверстие по ISO 273, средний ряд)
 
-const materials = {
+/* ============================================================
+   Резьбы: крупный шаг (ГОСТ 8724 / ISO 261).
+   As — номинальная площадь расчётного сечения по ГОСТ ISO 898-1
+   (табл. 4); где в таблице нет — считается по формуле стандарта:
+   As = π/4 · ((d2 + d3)/2)² = π/4 · (d − 0,9382·P)²
+   ============================================================ */
+const THREADS = [
+    { d: 1,   P: 0.25 }, { d: 1.2, P: 0.25 }, { d: 1.4, P: 0.3 },
+    { d: 1.6, P: 0.35, As: 1.27 }, { d: 1.8, P: 0.35 },
+    { d: 2,   P: 0.4,  As: 2.07 }, { d: 2.2, P: 0.45 },
+    { d: 2.5, P: 0.45, As: 3.39 }, { d: 3,   P: 0.5,  As: 5.03 },
+    { d: 3.5, P: 0.6,  As: 6.78 }, { d: 4,   P: 0.7,  As: 8.78 },
+    { d: 5,   P: 0.8,  As: 14.2 }, { d: 6,   P: 1,    As: 20.1 },
+    { d: 7,   P: 1,    As: 28.9 }, { d: 8,   P: 1.25, As: 36.6 },
+    { d: 10,  P: 1.5,  As: 58.0 }, { d: 12,  P: 1.75, As: 84.3 },
+    { d: 14,  P: 2,    As: 115 },  { d: 16,  P: 2,    As: 157 },
+    { d: 18,  P: 2.5,  As: 192 },  { d: 20,  P: 2.5,  As: 245 },
+    { d: 22,  P: 2.5,  As: 303 },  { d: 24,  P: 3,    As: 353 },
+    { d: 27,  P: 3,    As: 459 },  { d: 30,  P: 3.5,  As: 561 },
+    { d: 33,  P: 3.5,  As: 694 },  { d: 36,  P: 4,    As: 817 },
+    { d: 39,  P: 4,    As: 976 },
+    { d: 42,  P: 4.5 }, { d: 45, P: 4.5 }, { d: 48, P: 5 },  { d: 52, P: 5 },
+    { d: 56,  P: 5.5 }, { d: 60, P: 5.5 }, { d: 64, P: 6 },  { d: 68, P: 6 },
+    { d: 72,  P: 6 },   { d: 76, P: 6 },   { d: 80, P: 6 },  { d: 85, P: 6 },
+    { d: 90,  P: 6 },   { d: 100, P: 6 }
+];
+const THREAD_BY_D = new Map(THREADS.map(t => [String(t.d), t]));
+
+function stressArea(t) {
+    return t.As != null ? t.As : Math.PI / 4 * Math.pow(t.d - 0.9382 * t.P, 2);
+}
+
+/* ============================================================
+   Материалы и классы прочности
+   pick(d) -> { Rm, Sp } (МПа) или null, если класс для этого d не установлен
+   tau — доля Rm для оценки прочности на срез
+   ============================================================ */
+const fixedGrade = (Rm, Sp, tau) => ({ tau, pick: () => ({ Rm, Sp }) });
+const stainlessGrade = (Rm, Rp) => ({
+    tau: 0.6,
+    pick: () => ({ Rm, Sp: PROOF_FROM_YIELD * Rp, spApprox: true })
+});
+// ranges: [{ over?, to, Rm, Rp }] — диапазоны диаметров по ГОСТ EN 28839, табл. 2
+const rangedGrade = (label, ranges, unavailable) => ({
+    label, tau: 0.6, unavailable,
+    pick: d => {
+        for (const r of ranges) {
+            if ((r.over === undefined || d > r.over) && d <= r.to) {
+                return { Rm: r.Rm, Sp: PROOF_FROM_YIELD * r.Rp, spApprox: true };
+            }
+        }
+        return null;
+    }
+});
+
+const STD_STEEL = 'ГОСТ ISO 898-1-2014 (ISO 898-1:2013), табл. 3–5';
+const STD_STAINLESS = 'ГОСТ ISO 3506-1-2014 (ISO 3506-1:2009), табл. 2, прил. A';
+const STD_NONFERROUS = 'ГОСТ EN 28839-2015 (EN 28839:1991 / ISO 8839:1986), табл. 2 и 4';
+
+const MATERIALS = {
     steel: {
-        label: 'Сталь',
+        label: 'Сталь (класс прочности)', family: 'steel', standard: STD_STEEL, defaultGrade: '8.8',
         grades: {
-            '5.8':  { ut: 500,  yt: 400,  K: 0.20 },
-            '8.8':  { ut: 800,  yt: 640,  K: 0.20 },
-            '10.9': { ut: 1040, yt: 940,  K: 0.20 },
-            '12.9': { ut: 1220, yt: 1100, K: 0.20 },
-            '14.9': { ut: 1400, yt: 1260, K: 0.20 }
+            '4.6':  fixedGrade(400, 225, 0.6),
+            '4.8':  fixedGrade(420, 310, 0.5),
+            '5.6':  fixedGrade(500, 280, 0.6),
+            '5.8':  fixedGrade(520, 380, 0.5),
+            '6.8':  fixedGrade(600, 440, 0.5),
+            '8.8':  { tau: 0.6, pick: d => d <= 16 ? { Rm: 800, Sp: 580 } : { Rm: 830, Sp: 600 } },
+            '9.8':  { tau: 0.5,
+                      unavailable: 'Класс прочности 9.8 в ГОСТ ISO 898-1 установлен только для резьбы d ≤ 16 мм.',
+                      pick: d => d <= 16 ? { Rm: 900, Sp: 650 } : null },
+            '10.9': fixedGrade(1040, 830, 0.5),
+            '12.9': fixedGrade(1220, 970, 0.5)
         }
     },
     a2: {
-        label: 'Нержавейка A2',
-        grades: {
-            'A2-50': { ut: 500, yt: 210, K: 0.25 },
-            'A2-70': { ut: 700, yt: 450, K: 0.25 }
-        }
+        label: 'Нержавейка A2 (AISI 304)', family: 'stainless', standard: STD_STAINLESS, defaultGrade: 'A2-70',
+        grades: { 'A2-50': stainlessGrade(500, 210), 'A2-70': stainlessGrade(700, 450), 'A2-80': stainlessGrade(800, 600) }
     },
     a4: {
-        label: 'Нержавейка A4',
-        grades: {
-            'A4-50': { ut: 500, yt: 210, K: 0.27 },
-            'A4-70': { ut: 700, yt: 450, K: 0.27 },
-            'A4-80': { ut: 800, yt: 600, K: 0.27 }
-        }
+        label: 'Нержавейка A4 (AISI 316)', family: 'stainless', standard: STD_STAINLESS, defaultGrade: 'A4-70',
+        grades: { 'A4-50': stainlessGrade(500, 210), 'A4-70': stainlessGrade(700, 450), 'A4-80': stainlessGrade(800, 600) }
     },
     brass: {
-        label: 'Латунь',
+        label: 'Латунь', family: 'nonferrous', standard: STD_NONFERROUS,
         grades: {
-            'Л63': { ut: 350, yt: 150, K: 0.18 },
-            'ЛС59-1': { ut: 420, yt: 200, K: 0.18 }
+            'CU2': rangedGrade('CU2 · CuZn37 (латунь, близка к Л63)',
+                [{ to: 6, Rm: 440, Rp: 340 }, { over: 6, to: 39, Rm: 370, Rp: 250 }],
+                'Класс CU2 установлен ГОСТ EN 28839 для резьбы до M39.'),
+            'CU3': rangedGrade('CU3 · CuZn39Pb3 (свинцовистая латунь)',
+                [{ to: 6, Rm: 440, Rp: 340 }, { over: 6, to: 39, Rm: 370, Rp: 250 }],
+                'Класс CU3 установлен ГОСТ EN 28839 для резьбы до M39.'),
+            'CU6': rangedGrade('CU6 · CuZn40Mn1Pb',
+                [{ over: 6, to: 39, Rm: 440, Rp: 180 }],
+                'Класс CU6 установлен ГОСТ EN 28839 только для резьбы свыше M6 и до M39.')
         }
     },
-    phosphor_bronze: {
-        label: 'Бронза фосфористая',
+    bronze: {
+        label: 'Бронза', family: 'nonferrous', standard: STD_NONFERROUS,
         grades: {
-            'БрАЖ9-4': { ut: 600, yt: 300, K: 0.18 },
-            'БрОФ10-1': { ut: 450, yt: 220, K: 0.18 }
-        }
-    },
-    silicon_bronze: {
-        label: 'Бронза кремнистая',
-        grades: {
-            'БрКМц3-1': { ut: 650, yt: 320, K: 0.18 }
+            'CU4': rangedGrade('CU4 · CuSn6 (оловянная бронза)',
+                [{ to: 12, Rm: 470, Rp: 340 }, { over: 12, to: 39, Rm: 400, Rp: 200 }],
+                'Класс CU4 установлен ГОСТ EN 28839 для резьбы до M39.'),
+            'CU7': rangedGrade('CU7 · CuAl10Ni5Fe4 (алюминиевая бронза)',
+                [{ over: 12, to: 39, Rm: 640, Rp: 270 }],
+                'Класс CU7 установлен ГОСТ EN 28839 только для резьбы свыше M12 и до M39.')
         }
     },
     cuni: {
-        label: 'Сплав медь-никель',
+        label: 'Сплав Cu-Ni-Si (CuNi1Si)', family: 'nonferrous', standard: STD_NONFERROUS,
         grades: {
-            'МНЖ5-1': { ut: 400, yt: 180, K: 0.20 },
-            'МНЖМц10-1-1': { ut: 480, yt: 240, K: 0.20 }
+            'CU5': rangedGrade('CU5 · CuNi1Si',
+                [{ to: 30, Rm: 590, Rp: 540 }],
+                'Класс CU5 установлен ГОСТ EN 28839 для резьбы до M30.')
         }
     },
-    polyamide: {
-        label: 'Полиамид',
+    copper: {
+        label: 'Медь', family: 'nonferrous', standard: STD_NONFERROUS,
         grades: {
-            'PA6': { ut: 80, yt: 50, K: 0.15 },
-            'PA66': { ut: 90, yt: 60, K: 0.15 }
+            'CU1': rangedGrade('CU1 · Cu-ETP (медь)',
+                [{ to: 39, Rm: 240, Rp: 160 }],
+                'Класс CU1 установлен ГОСТ EN 28839 для резьбы до M39.')
         }
     }
 };
 
+/* ============================================================
+   Состояние резьбы. μ — единый коэффициент трения в резьбе и под
+   головкой (ориентировочные значения: VDI 2230:2015, справочная
+   литература). Значения взяты в нижней половине диапазона: если
+   реальное трение выше, болт получит меньшее, а не большее усилие.
+   ============================================================ */
+const FRICTION_STATES = {
+    steel: [
+        { id: 'dry',  label: 'Без смазки: чёрная, фосфатированная, без покрытия', mu: 0.16, range: '0,14–0,24' },
+        { id: 'zinc', label: 'Оцинкованная (гальваника), без смазки',              mu: 0.15, range: '0,13–0,24' },
+        { id: 'hdg',  label: 'Горячее цинкование, без смазки',                     mu: 0.22, range: '0,20–0,35' },
+        { id: 'oil',  label: 'Смазка: масло / консистентная смазка',               mu: 0.12, range: '0,08–0,16' },
+        { id: 'moly', label: 'Смазка: паста MoS₂ / графит',                        mu: 0.10, range: '0,04–0,12' }
+    ],
+    stainless: [
+        { id: 'dry',  label: 'Без смазки (риск задира резьбы!)',                   mu: 0.30, range: 'от 0,30' },
+        { id: 'oil',  label: 'Смазка: масло / консистентная смазка',               mu: 0.20, range: '0,20–0,35' },
+        { id: 'moly', label: 'Смазка: паста MoS₂ / никелевая антизадирная',        mu: 0.12, range: '0,08–0,16' }
+    ],
+    nonferrous: [
+        { id: 'dry',  label: 'Без смазки',                                         mu: 0.16, range: '0,14–0,24' },
+        { id: 'oil',  label: 'Смазка: масло / консистентная смазка',               mu: 0.12, range: '0,08–0,16' },
+        { id: 'moly', label: 'Смазка: паста MoS₂ / графит',                        mu: 0.10, range: '0,04–0,12' }
+    ]
+};
+const FAMILY_LABEL = { steel: 'Сталь', stainless: 'Нержавеющая сталь', nonferrous: 'Медь и сплавы' };
+
+/* ============================================================
+   Форматирование
+   ============================================================ */
+function roundSig(n, s) {
+    if (!isFinite(n) || n === 0) return 0;
+    const p = Math.pow(10, Math.floor(Math.log10(Math.abs(n))) - (s - 1));
+    return Math.round(n / p) * p;
+}
+function fmt(n, s) {
+    return roundSig(n, s || 3).toLocaleString('ru-RU', { maximumFractionDigits: 8 });
+}
+function comma(x) { return String(x).replace('.', ','); }
+
+/* ============================================================
+   Элементы страницы
+   ============================================================ */
 const materialSelect = document.getElementById('material');
 const gradeSelect = document.getElementById('grade');
 const diameterSelect = document.getElementById('diameter');
+const frictionSelect = document.getElementById('friction');
+const warningsList = document.getElementById('warnings');
+const sourceLine = document.getElementById('source-line');
+const $ = id => document.getElementById(id);
 
-Object.keys(threadArea).forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d;
-    opt.textContent = `M${d}`;
-    diameterSelect.appendChild(opt);
-});
-diameterSelect.value = 10;
+function fillSelect(select, items) {
+    select.innerHTML = '';
+    items.forEach(([value, text]) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = text;
+        select.appendChild(opt);
+    });
+}
+
+function initMaterials() {
+    fillSelect(materialSelect, Object.keys(MATERIALS).map(k => [k, MATERIALS[k].label]));
+    fillSelect(diameterSelect, THREADS.map(t => [String(t.d), 'M' + comma(t.d)]));
+    diameterSelect.value = '10';
+}
 
 function updateGrades() {
-    gradeSelect.innerHTML = '';
-    const mat = materials[materialSelect.value];
-    Object.keys(mat.grades).forEach(g => {
-        const opt = document.createElement('option');
-        opt.value = g;
-        opt.textContent = g;
-        gradeSelect.appendChild(opt);
-    });
+    const mat = MATERIALS[materialSelect.value];
+    fillSelect(gradeSelect, Object.keys(mat.grades).map(g => [g, mat.grades[g].label || g]));
+    if (mat.defaultGrade) gradeSelect.value = mat.defaultGrade;
+    updateFriction();
+}
+
+function updateFriction() {
+    const mat = MATERIALS[materialSelect.value];
+    fillSelect(frictionSelect, FRICTION_STATES[mat.family].map(s => [s.id, s.label]));
     calculate();
 }
 
+function buildMuTable() {
+    let html = '<tr><th>Материал</th><th>Состояние резьбы</th><th>μ в расчёте</th><th>Типичный диапазон</th></tr>';
+    Object.keys(FRICTION_STATES).forEach(fam => {
+        FRICTION_STATES[fam].forEach(s => {
+            html += '<tr><td>' + FAMILY_LABEL[fam] + '</td><td>' + s.label + '</td><td>' +
+                    comma(s.mu.toFixed(2)) + '</td><td>' + s.range + '</td></tr>';
+        });
+    });
+    $('mu-table').innerHTML = html;
+}
+
+/* ============================================================
+   Предупреждения о выходе за область стандартов
+   ============================================================ */
+function collectWarnings(mat, gradeKey, d, stateId) {
+    const w = [];
+    const M = 'M' + comma(d);
+
+    if (mat.family === 'steel') {
+        if (d < 1.6) {
+            w.push(['danger', M + ': резьба меньше M1,6 — вне области ГОСТ ISO 898-1 (M1,6–M39). Классы прочности для неё не нормируются, показан справочный расчёт Rm,min × As.']);
+        } else if (d < 3) {
+            w.push(['warn', 'Для резьбы меньше M3 ГОСТ ISO 898-1 не устанавливает ни разрушающих, ни пробных нагрузок (проверяется разрушающий крутящий момент по ГОСТ ISO 898-7). Показан справочный расчёт Rm,min × As.']);
+        } else if (d > 39) {
+            w.push(['danger', M + ': диаметр больше M39 — вне области ГОСТ ISO 898-1. Свойства таких изделий согласуются с изготовителем, показан справочный расчёт.']);
+        }
+        if (gradeKey === '12.9') {
+            w.push(['warn', 'Класс 12.9: ГОСТ ISO 898-1 рекомендует применять его с осторожностью — под воздействием среды возможно коррозионное растрескивание (в том числе у изделий с покрытием).']);
+        }
+        if (gradeKey === '8.8' && (d === 12 || d === 14 || d === 16)) {
+            w.push(['info', 'Для строительных болтовых соединений ГОСТ ISO 898-1 задаёт для класса 8.8 повышенные минимальные разрушающие нагрузки: 70 000 Н (M12), 95 500 Н (M14), 130 000 Н (M16).']);
+        }
+        if (stateId === 'hdg' && (d === 8 || d === 10) && ['4.6', '5.6', '8.8', '10.9'].indexOf(gradeKey) !== -1) {
+            w.push(['info', 'Для резьбы 6az под горячее цинкование погружением ГОСТ ISO 898-1 (табл. 4, сноска) применяет у ' + M + ' уменьшенные значения по ISO 10684 — уточните у изготовителя.']);
+        }
+    } else if (mat.family === 'stainless') {
+        if (d < 1.6) {
+            w.push(['danger', M + ': резьба меньше M1,6 — вне области ГОСТ ISO 3506-1 (до M39 включительно, нижней границы M1,6). Показан справочный расчёт.']);
+        } else if (d < 5) {
+            w.push(['warn', 'Для резьбы M1,6–M4 по ГОСТ ISO 3506-1 проверяется разрушающий крутящий момент, а не разрывная нагрузка. Показан справочный расчёт Rm,min × As.']);
+        } else if (d > 39) {
+            w.push(['danger', M + ': диаметр больше M39 — вне области ГОСТ ISO 3506-1. Классы прочности можно распространять на такие размеры только при выполнении всех требований стандарта; показан справочный расчёт.']);
+        }
+        if (stateId === 'dry') {
+            w.push(['warn', 'Нержавеющий крепёж склонен к задиру резьбы: затягивайте плавно, на малой скорости, а лучше — со смазкой. Разброс трения без смазки очень велик, поэтому момент здесь особенно приблизителен.']);
+        }
+    } else {
+        if (d < 1.6) {
+            w.push(['danger', M + ': резьба меньше M1,6 — вне области ГОСТ EN 28839 (M1,6–M39). Показан справочный расчёт.']);
+        } else if (d < 3) {
+            w.push(['warn', 'Для резьбы M1,6–M2,5 ГОСТ EN 28839 не приводит минимальных разрушающих нагрузок (табл. 4 начинается с M3), нормируется разрушающий крутящий момент. Показан справочный расчёт Rm,min × As.']);
+        }
+        w.push(['info', 'Значения свойств цветных металлов — минимальные по стандарту; они сильно зависят от состояния материала (наклёп, отжиг). Для коррозионной стойкости и электропроводности стандарт требований не устанавливает.']);
+    }
+    return w;
+}
+
+function renderWarnings(list) {
+    warningsList.innerHTML = '';
+    list.forEach(([type, text]) => {
+        const li = document.createElement('li');
+        if (type !== 'warn') li.className = type;
+        li.textContent = text;
+        warningsList.appendChild(li);
+    });
+}
+
+/* ============================================================
+   Основной расчёт
+   ============================================================ */
+function clearResults(message) {
+    ['tensile-n', 'tensile-kg', 'tensile-t', 'shear-n', 'shear-kg', 'shear-t',
+     'torque-nm', 'torque-kgm', 'preload-n'].forEach(id => { $(id).textContent = '—'; });
+    $('tensile-explanation').textContent = message;
+    $('shear-explanation').textContent = '';
+    $('torque-explanation').textContent = '';
+}
+
 function calculate() {
-    const mat = materials[materialSelect.value];
-    const grade = mat.grades[gradeSelect.value];
-    const d = parseFloat(diameterSelect.value);
-    const As = threadArea[d];
+    const mat = MATERIALS[materialSelect.value];
+    const gradeKey = gradeSelect.value;
+    const grade = mat.grades[gradeKey];
+    const thread = THREAD_BY_D.get(diameterSelect.value);
+    const states = FRICTION_STATES[mat.family];
+    const state = states.find(s => s.id === frictionSelect.value) || states[0];
 
-    // Разрыв (Н)
-    const tensileN = grade.ut * As;
-    const tensileKgf = tensileN / 9.81;
-    const tensileT = tensileKgf / 1000;
+    const d = thread.d, P = thread.P, As = stressArea(thread);
+    const M = 'M' + comma(d);
 
-    // Срез (Н)
-    const shearN = 0.6 * grade.ut * As;
-    const shearKgf = shearN / 9.81;
-    const shearT = shearKgf / 1000;
+    sourceLine.textContent = 'Источник свойств материала: ' + mat.standard + '.';
+    renderWarnings(collectWarnings(mat, gradeKey, d, state.id));
 
-    // Крутящий момент
-    const preload = 0.7 * grade.yt * As;
-    const torqueNm = (grade.K * d * preload) / 1000;
-    const torqueKgm = torqueNm / 9.81;
+    const props = grade.pick(d);
+    if (!props) {
+        clearResults((grade.unavailable || 'Для выбранного класса нет данных') + ' Для ' + M + ' расчёт недоступен.');
+        return;
+    }
 
-    // Вывод значений
-    document.getElementById('tensile-n').textContent = formatNum(tensileN);
-    document.getElementById('tensile-kg').textContent = formatNum(tensileKgf);
-    document.getElementById('tensile-t').textContent = formatNum(tensileT);
+    // Нагрузки
+    const Fm = props.Rm * As;                // Н, минимальная разрушающая нагрузка
+    const Fp = props.Sp * As;                // Н, пробная нагрузка
+    const Fshear = grade.tau * props.Rm * As;
+    const toKgf = n => n / G;
+    const toTon = n => n / G / 1000;
 
-    document.getElementById('shear-n').textContent = formatNum(shearN);
-    document.getElementById('shear-kg').textContent = formatNum(shearKgf);
-    document.getElementById('shear-t').textContent = formatNum(shearT);
+    // Момент затяжки: T = F·(0,16·P + 0,58·d2·μ + 0,5·Dкм·μ)
+    const Fpre = PRELOAD_RATIO * Fp;
+    const d2 = d - 0.6495 * P;
+    const Dkm = DKM_RATIO * d;
+    const T = Fpre * (0.16 * P + 0.58 * d2 * state.mu + 0.5 * Dkm * state.mu) / 1000; // Н·м
+    const K = T * 1000 / (d * Fpre);
 
-    document.getElementById('torque-nm').textContent = formatNum(torqueNm);
-    document.getElementById('torque-kgm').textContent = formatNum(torqueKgm);
+    $('tensile-n').textContent = fmt(Fm);
+    $('tensile-kg').textContent = fmt(toKgf(Fm));
+    $('tensile-t').textContent = fmt(toTon(Fm));
 
-    // Пояснения
-    document.getElementById('tensile-explanation').innerHTML = 
-        `Если повесить на болт <strong>${formatNum(tensileKgf)} кг</strong> (${formatNum(tensileT)} т), он оторвётся. ` +
-        `Это максимальная нагрузка на растяжение, которую выдержит ${grade.value || gradeSelect.value} болт диаметром M${d}.`;
+    $('shear-n').textContent = fmt(Fshear);
+    $('shear-kg').textContent = fmt(toKgf(Fshear));
+    $('shear-t').textContent = fmt(toTon(Fshear));
 
-    document.getElementById('shear-explanation').innerHTML = 
-        `Если приложить боковую нагрузку <strong>${formatNum(shearKgf)} кг</strong> (${formatNum(shearT)} т), болт срежет. ` +
-        `Нагрузка на срез обычно составляет 60% от прочности на разрыв.`;
+    $('torque-nm').textContent = fmt(T);
+    $('torque-kgm').textContent = fmt(T / G);
+    $('preload-n').textContent = fmt(Fpre);
 
-    document.getElementById('torque-explanation').innerHTML = 
-        `Рекомендуемый момент затяжки: <strong>${formatNum(torqueNm)} Н·м</strong> (${formatNum(torqueKgm)} кгс·м). ` +
-        `Это усилие, с которым нужно закрутить болт, чтобы создать надёжное соединение без перегрузки.`;
+    const gradeName = (grade.label ? gradeKey : gradeKey);
+    const proofText = props.spApprox
+        ? 'условной пробной нагрузки ' + fmt(Fp) + ' Н (0,9·Rp0,2·As; в стандарте не задана)'
+        : 'пробной нагрузки Fp = ' + fmt(Fp) + ' Н (по ГОСТ ISO 898-1)';
+
+    $('tensile-explanation').innerHTML =
+        'Минимальная разрушающая нагрузка Fm,min = Rm,min × As = ' + props.Rm + ' МПа × ' + comma(As.toFixed(As < 10 ? 2 : As < 100 ? 1 : 0)) + ' мм². ' +
+        'При осевой растягивающей нагрузке <strong>' + fmt(toKgf(Fm)) + ' кгс</strong> (' + fmt(toTon(Fm)) + ' т) ' +
+        'болт ' + gradeName + ' диаметром ' + M + ' разрушается. Это предельное значение, а не рабочая нагрузка: ' +
+        'рабочую нагрузку выбирайте с запасом прочности 2–3.' +
+        (props.spApprox ? '' : ' Пробная нагрузка Fp (после неё не должно остаться остаточного удлинения): ' + fmt(Fp) + ' Н.');
+
+    $('shear-explanation').innerHTML =
+        'Оценка для одной плоскости среза, проходящей по резьбе: ' + comma(grade.tau) + ' × Rm,min × As. ' +
+        'Боковая нагрузка <strong>' + fmt(toKgf(Fshear)) + ' кгс</strong> (' + fmt(toTon(Fshear)) + ' т) срежет болт. ' +
+        'Если плоскость среза проходит по гладкой части стержня, несущая способность выше (площадь πd²/4); при двух плоскостях среза — вдвое выше. ' +
+        'В ГОСТ прочность на срез не нормируется.';
+
+    $('torque-explanation').innerHTML =
+        'Рекомендуемый момент затяжки: <strong>' + fmt(T) + ' Н·м</strong> (' + fmt(T / G) + ' кгс·м) ' +
+        'при состоянии «' + state.label.charAt(0).toLowerCase() + state.label.slice(1) + '»: μ = ' + comma(state.mu.toFixed(2)) +
+        ' (K ≈ ' + comma(K.toFixed(2)) + '; типичный диапазон μ ' + state.range + '). ' +
+        'Момент создаёт усилие затяжки около ' + fmt(Fpre) + ' Н — это 75 % от ' + proofText + '. ' +
+        'При затяжке ключом фактическое усилие обычно отличается от расчётного примерно на ±25 %; ' +
+        'ГОСТ ISO 898-1 момент затяжки не нормирует.';
 }
 
-function formatNum(n) {
-    if (n >= 10000) return Math.round(n).toLocaleString('ru-RU');
-    if (n >= 100) return Math.round(n).toLocaleString('ru-RU');
-    if (n >= 10) return n.toFixed(1);
-    return n.toFixed(2);
-}
-
+/* ============================================================
+   Инициализация
+   ============================================================ */
 materialSelect.addEventListener('change', updateGrades);
 gradeSelect.addEventListener('change', calculate);
 diameterSelect.addEventListener('change', calculate);
+frictionSelect.addEventListener('change', calculate);
 
+initMaterials();
+buildMuTable();
 updateGrades();
 </script>
 </body>
